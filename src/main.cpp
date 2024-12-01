@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WS2812FX.h>
+#include <Wire.h>
 
 #define LED_COUNT 10
 #define LED_PIN 13
@@ -7,6 +8,10 @@
 #define DEBOUNCE_DELAY 300  // 50 ms Entprellzeit
 
 #define TIMER_MS 5000
+
+#define SENSOR_ADDRESS 0x57  // I2C address of the sensor
+int bcount; // Define counter to count bytes in response
+byte distance[4]; // Define array for return data
 
 // put function declarations here:
 WS2812FX ws2812fx = WS2812FX(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
@@ -46,6 +51,35 @@ void IRAM_ATTR handleButtonPress() {
     }
 }
 
+float getdistance() {
+  // Start a ranging session by writing '1' to the sensor
+  Wire.beginTransmission(SENSOR_ADDRESS);
+  Wire.write(0x01);  // Command to start ranging
+  Wire.endTransmission();
+  // Request 3 bytes from the sensor
+  Wire.requestFrom(SENSOR_ADDRESS, 3);
+  if (Wire.available() == 3) {
+    uint32_t distance_um = 0;
+
+    // Read 3 bytes and combine them into a single value
+    distance_um |= Wire.read() << 16;  // MSB
+    distance_um |= Wire.read() << 8;   // Middle byte
+    distance_um |= Wire.read();        // LSB
+
+    // Convert distance from micrometers to millimeters
+    float distance_mm = distance_um / 1000.0;
+
+    // Print the distance
+    Serial.print("Distance: ");
+    Serial.print(distance_mm);
+    Serial.println(" mm");
+    return distance_mm;
+  } else {
+    Serial.println("Failed to read distance!");
+    return -1;
+  }
+}
+
 void setup() {
     Serial.begin(115200);
     // Alles für den LED Stripe
@@ -67,6 +101,7 @@ void setup() {
 void loop() {
     
     now = millis();
+    float sensor_distance = getdistance();
     ws2812fx.service();
     if (currentState != lastState) {
       Serial.print("Neuer Zustand: ");
