@@ -1,0 +1,70 @@
+//-------------------------- UART (TX RX) -----------------------
+/*
+Module:           RCWL-9610, RCWL-9600, RCWL-9620
+Function:         UART mode for distance measurement
+Connection:
+   - VCC               = 3.3V/5.5V
+   - Trig_RX_SCL_I/O   = GPIO1 (TX1)
+   - Echo_TX_SDA       = GPIO3 (RX1)
+   - GND               = GND
+*/
+
+#include <Arduino.h>  // Arduino-Bibliothek für ESP32-Unterstützung
+
+#define RXD 3  // RXD for UART1
+#define TXD 1  // TXD for UART1
+
+float Data_h = 0;                                 // High byte (16-23 bits)
+float Data_m = 0;                                 // Middle byte (8-15 bits)
+float Data_l = 0;                                 // Low byte (0-7 bits)
+float distance = 0;                               // Calculated distance in CM
+
+void setup() {
+  Serial.begin(115200);                            // Serial Monitor for debugging
+  Serial1.begin(115200, SERIAL_8N1, RXD, TXD);     // UART1 for RCWL-9610 communication
+  
+  Serial.println("RCWL-9610 UART Ranging start...");
+}
+
+void loop() {
+  Data_h = 0;
+  Data_m = 0;
+  Data_l = 0;
+  distance = 0;                                    // Reset data variables
+  
+  Serial1.flush();                                 // Clear UART buffer
+  Serial1.write(0xA0);                             // Send start ranging command
+  
+  delay(150);                                      // Wait for measurement (RCWL requires ~120ms per cycle)
+  
+  if (Serial1.available() >= 3) {                  // Ensure at least 3 bytes are available
+    Data_h = Serial1.read();                       // Read high byte
+    Data_m = Serial1.read();                       // Read middle byte
+    Data_l = Serial1.read();                       // Read low byte
+  } else {                                         // Clear data if not enough bytes received
+    Data_h = 0;
+    Data_m = 0;
+    Data_l = 0;
+  }
+  
+  // Calculate distance in CM
+  distance = (Data_h * 65536 + Data_m * 256 + Data_l) / 10000;
+
+  // Display result
+  Serial.print("Distance: ");
+  if (distance >= 1 && distance <= 900) {          // Valid range: 1CM - 900CM
+    Serial.print(distance);
+    Serial.println(" CM");
+  } else {
+    Serial.println("Invalid measurement");
+    Serial.print("Data_h: ");
+    Serial.println(Data_h);
+    Serial.print("Data_m: ");
+    Serial.println(Data_m);
+    Serial.print("Data_l: ");
+    Serial.println(Data_l);
+    Serial.println(" - - - - ");                  // Display invalid measurement marker
+  }
+
+  delay(200);                                      // Delay for next measurement cycle
+}
