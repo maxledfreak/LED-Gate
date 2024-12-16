@@ -1,0 +1,59 @@
+//-------------------------- 1 Wire (Trig I/O) ------------------------------
+
+/*
+Module：       RCWL-9610,RCWL-9600,RCWL-9620 16MM Split Type Open Type Ultrasonic Ranging Module
+Version：      V2.0
+Date：         20220710 
+Master chip：  RCWL-9610
+Function：     RCWL-9610 ultrasonic distance measuring module distance measurement and serial port display in single bus mode
+Notice：       Need to set the module in 1-WIRE mode (R7 R8 = 10K)
+Write：        Wuxi Richen IoT Technology Co., Ltd.
+Test board：   RCWL-3310
+Program customization：  13915288564
+Connection ：
+   -VCC               = 3.3V/5.5V
+   -Trig_RX_SCL_I/O   = A5
+   -Echo_TX_SDA       NC (not connect)
+   -GND               = GND
+*/
+ 
+float       distance;
+const int   trig_echo=A5;               //Trig_RX_SCL_I/O connected to A5 pin
+ 
+void setup()
+{
+  Serial.begin(9600);                   //Define serial port baud rate 9600 Factory default baud rate 9600
+  pinMode(trig_echo,OUTPUT);            //Set Trig_RX_SCL_I/O as output
+  Serial.println("RCWL-9610-1-WIRE Ranging start：");
+}
+ 
+void loop()
+{
+ pinMode(trig_echo,OUTPUT);              //Set Trig_RX_SCL_I/O as output
+ 
+ digitalWrite(trig_echo,HIGH);
+ delayMicroseconds(10);
+ digitalWrite(trig_echo,LOW);           //Trig_RX_SCL_I/O pin outputs 10US high level pulse trigger signal 
+ 
+ pinMode(trig_echo,INPUT);              //Set Trig_RX_SCL_I/O as the input to receive the distance signal fed back by the module
+  
+ distance  = pulseIn(trig_echo,HIGH);   //Count the received high time
+ //Serial.print("Original value: ");
+ //Serial.print(distance);
+ distance  = distance*340/2/10000;      // Calculation distance 
+                                        // 1: speed of sound: 340M/S 
+                                        // 2: actual distance is 1/2 speed of sound distance 
+                                        // 3: counting clock is 1US// temperature compensation formula: c=(331.45+0.61t/℃)ms-1 
+                                        // (where 331.45 is at 0 degrees
+ Serial.print("distance: ");
+ Serial.print(distance);                          
+ Serial.println("CM");                  //Serial port output distance signal
+ //digitalWrite(trig_echo,LOW);   
+ pinMode(trig_echo,OUTPUT);             // Set Trig_RX_SCL_I/O as output, ready for next measurement
+ //Serial.println("");                  // new line
+ delay(20);                             // After a single measurement is completed, 
+                                        // add a 30mS delay before the next measurement. 
+                                        // To prevent the aftermath of the last measurement 
+                                        // When measuring at close range, resulting in inaccurate measurement.
+ delay(100);                            // Delay 200mS to measure again, delay is not necessary
+} 

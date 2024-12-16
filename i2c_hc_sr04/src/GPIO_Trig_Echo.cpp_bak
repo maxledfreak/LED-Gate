@@ -1,0 +1,54 @@
+//--------------------- GPIO (Trig Echo) --------------------
+/*
+Module：       RCWL-9610,RCWL-9600,RCWL-9620 16MM Split Type Open Type Ultrasonic Ranging Module
+Version：      V2.0
+Date：         20220710 
+Master chip：  RCWL-9610
+Function：     In GPIO mode, RCWL-9610 ultrasonic ranging module measures distance and displays it on the serial port
+Notice：       Module default GPIO mode
+Write：        Wuxi Richen IoT Technology Co., Ltd.
+Test board：   RCWL-3310
+Program customization：  13915288564
+Connection ：
+   -VCC               = 3.3V/5.5V
+   -Trig_RX_SCL_I/O   = A5
+   -Echo_TX_SDA       = A4
+   -GND               = GND
+*/
+ 
+float       distance;
+const int   echo=A4;                         // echo to A4 pin
+const int   trig=A5;                         // trig connected to pin A5
+ 
+void setup()
+{
+  Serial.begin(9600);                        //Baud rate 9600
+  pinMode(echo,INPUT);                       //Set echo as input pin
+  pinMode(trig,OUTPUT);                      //Set trig as output pin
+  Serial.println("RCWL-9610-GPIO Ranging start：");
+}
+ 
+void loop()
+{
+  
+ digitalWrite(trig,HIGH);
+ delayMicroseconds(500);
+ digitalWrite(trig,LOW);              // Trig pin outputs 10US high level pulse trigger signal 
+ 
+ distance  = pulseIn(echo,HIGH);      // Count the received high time
+ distance  = distance*340/2/10000;    // Calculation distance 
+                                      // 1: speed of sound: 340M/S 
+                                      // 2: actual distance is 1/2 speed of sound distance 
+                                      // 3: counting clock is 1uS
+                                      // temperature compensation formula: 
+                                      // c=(331.45+0.61t/℃)ms-1 (where 331.45 is at 0 Spend)
+ Serial.print("distance: ");
+ Serial.print(distance);              // Serial port output distance signal
+ Serial.print("CM");                        
+ Serial.println("");                 // new line
+ delay(20);                          // After a single measurement is completed, 
+                                     // add a 30mS delay before the next measurement. 
+                                     // To prevent the aftermath of the last measurement 
+                                     // When measuring at close range, resulting in inaccurate measurement.
+ delay(100);                         // Delay 200mS to measure again, delay is not necessary
+} 
